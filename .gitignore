@@ -4,3 +4,4 @@ dist
 .env.*
 scripts/.cache
 .DS_Store
+*.pdf
