@@ -1,5 +1,6 @@
 // Fetches SF State's public student-organisation events feed and reshapes it for the map.
 import { matchPlace } from './places.js'
+import { sampleEvents } from './samples.js'
 import { communityEvents } from './store.js'
 
 const FEED = 'https://sfsu.campuslabs.com/engage/api/discovery/event/search'
@@ -82,9 +83,13 @@ async function listing() {
   }
 }
 
-/** Everything on the map: SF State's listing plus the events students have added. */
-export async function getEvents() {
+/**
+ * Everything on the map: SF State's listing plus the events students have added, and, when
+ * asked, the made-up sample posts used for demonstrations.
+ * @param {{ samples?: boolean }} [options]
+ */
+export async function getEvents({ samples = false } = {}) {
   const official = await listing()
-  const events = [...official.events, ...communityEvents()].sort((a, b) => a.start - b.start)
+  const events = [...official.events, ...communityEvents(), ...(samples ? sampleEvents() : [])].sort((a, b) => a.start - b.start)
   return { ...official, events }
 }

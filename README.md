@@ -86,6 +86,8 @@ port 8080, which is what a container host such as Cloud Run needs.
 - **The free tier of the Gemini API is used,** on which Google may use submitted content to improve
   its products. A real deployment should use a paid tier.
 - **The moving cars and people are decoration.** Their positions are random, not real traffic.
+- **The "+ Student posts" switch adds made-up sample events** to show what the week looks like
+  once students post. They are labelled as samples everywhere they appear and are never saved.
 - **Known limits.** There is no sign-in yet, so anyone can submit; a deployment at SF State would
   restrict posting to university accounts. Student events are kept in a file on the server.
   Building heights that OpenStreetMap lacks are estimates.

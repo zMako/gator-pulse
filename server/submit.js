@@ -57,8 +57,11 @@ async function askGemma(contents) {
   throw failure
 }
 
+/** The campus-local calendar day of a timestamp, YYYY-MM-DD. @param {number} time */
+export const dayAt = (time) => dayFormat.format(time)
+
 /** Campus-local date and time to a timestamp. @param {string} date YYYY-MM-DD @param {string} time HH:MM */
-function campusTime(date, time) {
+export function campusTime(date, time) {
   const [year, month, day] = date.split('-').map(Number)
   const [hour, minute] = time.split(':').map(Number)
   const guess = Date.UTC(year, month - 1, day, hour, minute)

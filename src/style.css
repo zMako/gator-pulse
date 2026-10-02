@@ -74,8 +74,13 @@ body.ready .bldg {
   align-items: flex-start;
   pointer-events: none;
 }
-#hud > * {
+#hud > *,
+.hud-right > * {
   pointer-events: auto;
+}
+.hud-right {
+  display: flex;
+  gap: 8px;
 }
 .brand {
   padding: 10px 14px;

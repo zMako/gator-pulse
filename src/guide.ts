@@ -38,6 +38,8 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text 
 export function createGuide(
   root: HTMLElement,
   handlers: { onPlan(plan: Plan): void; onStep(plan: Plan, index: number): void; onAsk(): void },
+  /** Extra fields sent with every question, e.g. whether the demo's sample posts are showing. */
+  extra: () => Record<string, unknown> = () => ({}),
 ): Guide {
   const history: Turn[] = []
   let stepButtons: HTMLButtonElement[] = []
@@ -89,7 +91,7 @@ export function createGuide(
       const response = await fetch('/api/guide', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, history }),
+        body: JSON.stringify({ message, history, ...extra() }),
       })
       const body = await response.json().catch(() => null)
       if (!response.ok || !body) throw new Error(body?.error ?? `The guide request failed (${response.status}).`)

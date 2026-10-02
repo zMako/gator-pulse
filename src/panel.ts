@@ -46,7 +46,7 @@ export function createPanel(
           const dot = el('span', 'dot')
           dot.style.setProperty('--c', themeOf(event.theme).css)
           const what = el('span', 'what', event.title)
-          const origin = event.source === 'community' ? ' · added by a student' : ''
+          const origin = event.sample ? ' · sample student post' : event.source === 'community' ? ' · added by a student' : ''
           what.append(el('small', '', (event.place ? event.where : `${event.where} · not on the map`) + origin))
           row.append(dot, el('span', 'when', state === 'live' ? 'Live' : formatTime(event.start)), what)
           row.addEventListener('click', () => handlers.onSelect(event))
@@ -88,7 +88,8 @@ export function createPanel(
         fact('Where', event.place ? event.where : `${event.where} (not on the map)`),
       )
       if (event.host) children.push(fact('Host', event.host))
-      if (event.source === 'community') children.push(fact('Source', 'Added by a student, read by Gemma 4'))
+      if (event.sample) children.push(fact('Source', 'A sample student post, made up for the demo'))
+      else if (event.source === 'community') children.push(fact('Source', 'Added by a student, read by Gemma 4'))
       children.push(el('p', 'about', event.description))
       if (event.url) {
         const link = el('a', '', 'Open the event page')

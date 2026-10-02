@@ -196,6 +196,8 @@ async function init() {
   // --- events, beacons, list and timeline ------------------------------------------------------
   let events: CampusEvent[] = []
   let selected: CampusEvent | null = null
+  // Whether the demo's sample student posts are showing alongside the official listing.
+  let samples = params.get('posts') === '1'
   /** The event each beacon currently stands for. */
   const leads = new Map<string, CampusEvent>()
   let autoNight = 1
@@ -286,7 +288,9 @@ async function init() {
     if (place) flyTo(place.anchor)
   }
 
-  const guide = createGuide(document.getElementById('guide')!, {
+  const guide = createGuide(
+    document.getElementById('guide')!,
+    {
     onAsk: stopTour,
     onPlan(plan) {
       stopTour()
@@ -298,7 +302,18 @@ async function init() {
       stopTour()
       showStep(plan, index)
     },
-  })
+    },
+    () => ({ samples }),
+  )
+
+  const sourceButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-set-source]')]
+  function setSamples(on: boolean) {
+    samples = on
+    for (const button of sourceButtons) button.setAttribute('aria-pressed', String((button.dataset.setSource === 'all') === on))
+    load()
+  }
+  for (const button of sourceButtons) button.addEventListener('click', () => setSamples(button.dataset.setSource === 'all'))
+  setSamples(samples)
 
   // --- events added by students -------------------------------------------------------------------
   /** Put a newly added event on the map, whether it came from this page or from someone else's. */
@@ -331,7 +346,7 @@ async function init() {
 
   async function load() {
     try {
-      const result = await loadEvents()
+      const result = await loadEvents(samples)
       events = result.events
       timeline.setEvents(events)
       panel.showNote(result.stale ? "Showing the last copy of SF State's events listing; it could not be refreshed." : '')
@@ -340,8 +355,6 @@ async function init() {
     }
     refresh(timeline.time)
   }
-  refresh(timeline.time)
-  load()
   setInterval(load, FEED_REFRESH_MS)
   // While the slider sits at "now", keep the live markers and the light moving with the clock.
   setInterval(() => refresh(timeline.time), 30 * 1000)

@@ -165,10 +165,11 @@ function buildPlan(args, events) {
 /**
  * @param {string} message
  * @param {{ role: string, text: string }[]} history earlier turns of this conversation
+ * @param {{ samples?: boolean }} [options] whether the demo's sample student posts are in play
  */
-export async function askGuide(message, history) {
+export async function askGuide(message, history, { samples = false } = {}) {
   const ai = gemini()
-  const { events } = await getEvents()
+  const { events } = await getEvents({ samples })
   let failure
   for (const model of models()) {
     try {

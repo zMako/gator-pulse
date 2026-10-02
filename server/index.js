@@ -33,9 +33,9 @@ function rateLimit(limit) {
   }
 }
 
-app.get('/api/events', async (_request, response) => {
+app.get('/api/events', async (request, response) => {
   try {
-    response.json(await getEvents())
+    response.json(await getEvents({ samples: request.query.samples === '1' }))
   } catch (error) {
     console.error('events feed failed:', error)
     response.status(502).json({ error: "SF State's events feed could not be reached." })
@@ -47,7 +47,7 @@ app.post('/api/guide', express.json({ limit: '32kb' }), rateLimit(12), async (re
   if (!message) return response.status(400).json({ error: 'Type a message first.' })
   const history = Array.isArray(request.body.history) ? request.body.history.slice(-10) : []
   try {
-    response.json(await askGuide(message, history))
+    response.json(await askGuide(message, history, { samples: request.body.samples === true }))
   } catch (error) {
     if (error instanceof GuideError) return response.status(error.status).json({ error: error.message })
     console.error('guide failed:', error)
