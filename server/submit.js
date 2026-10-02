@@ -37,24 +37,26 @@ function gemma() {
 // Tried in order; the next one is only used when Google answers with a server error.
 const models = () => (process.env.GEMMA_MODEL ? [process.env.GEMMA_MODEL] : ['gemma-4-26b-a4b-it', 'gemma-4-31b-it'])
 
-/** @param {import('@google/genai').ContentListUnion} contents */
+/**
+ * Both Gemma models are asked at once and the first good answer wins. One slow or overloaded
+ * model then costs nothing but tokens, and a flyer reads in seconds rather than minutes.
+ * @param {import('@google/genai').ContentListUnion} contents
+ */
 async function askGemma(contents) {
-  let failure
-  for (const model of models()) {
-    try {
-      return await gemma().models.generateContent({
-        model,
-        contents,
-        // Left to its default, Gemma spends most of its time thinking: about 19 seconds for a
-        // one-line message. Reading a flyer is extraction, so minimal thinking answers in about two.
-        config: { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL }, httpOptions: { timeout: 60_000, retryOptions: { attempts: 2, initialDelay: 1 } } },
-      })
-    } catch (error) {
-      failure = error
-      if (!(Number(/** @type {{ status?: unknown }} */ (error)?.status) >= 500)) throw error
-    }
+  const attempts = models().map((model) =>
+    gemma().models.generateContent({
+      model,
+      contents,
+      // Left to its default, Gemma spends most of its time thinking: about 19 seconds for a
+      // one-line message. Reading a flyer is extraction, so minimal thinking answers in about two.
+      config: { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL }, httpOptions: { timeout: 30_000, retryOptions: { attempts: 1 } } },
+    }),
+  )
+  try {
+    return await Promise.any(attempts)
+  } catch (error) {
+    throw error instanceof AggregateError ? error.errors[0] : error
   }
-  throw failure
 }
 
 /** The campus-local calendar day of a timestamp, YYYY-MM-DD. @param {number} time */

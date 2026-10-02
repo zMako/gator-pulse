@@ -14,7 +14,7 @@ interface Draft {
   unsure: string[]
 }
 
-const MAX_IMAGE_SIDE = 1400
+const MAX_IMAGE_SIDE = 1024
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text = '') => {
   const element = document.createElement(tag)
