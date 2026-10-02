@@ -106,17 +106,160 @@ body.ready .bldg {
   background: var(--active);
 }
 
-/* --- event list ------------------------------------------------------------------------------ */
-#events {
+/* --- side panel: guide and event list -------------------------------------------------------- */
+#side {
   position: fixed;
   left: 16px;
   top: 84px;
-  width: 292px;
+  width: 320px;
   max-height: calc(100vh - 84px - 150px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-bottom: 1px solid var(--panel-edge);
+}
+.tabs button {
+  flex: 1;
+  padding: 7px 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+  border-radius: 10px;
+}
+.tabs button[aria-selected='true'] {
+  color: var(--ink);
+  background: var(--active);
+}
+#side > section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+#side > section[hidden] {
+  display: none;
+}
+
+#guide .log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 12px 4px;
+}
+#guide p {
+  margin: 0 0 9px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+#guide .hint {
+  color: var(--ink-soft);
+}
+#guide .me {
+  margin-left: 28px;
+  padding: 7px 10px;
+  border-radius: 11px 11px 3px 11px;
+  background: var(--active);
+}
+#guide .waiting {
+  color: var(--ink-soft);
+  font-style: italic;
+}
+#guide .problem {
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-edge);
+}
+#guide .chips {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+#guide .chips button {
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.3;
+  text-align: left;
+  border-radius: 10px;
+  border: 1px solid var(--panel-edge);
+}
+#guide .chips button:hover {
+  background: var(--active);
+}
+#guide .plan {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  counter-reset: stop;
+}
+#guide .plan button {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 1px 6px;
+  width: 100%;
+  padding: 7px 9px;
+  text-align: left;
+  border-radius: 10px;
+  border: 1px solid var(--panel-edge);
+  counter-increment: stop;
+}
+#guide .plan button::before {
+  content: counter(stop);
+  grid-row: span 2;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+#guide .plan button:hover,
+#guide .plan button[aria-current='step'] {
+  background: var(--active);
+}
+#guide .plan b {
+  font-size: 12.5px;
+}
+#guide .plan span {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--ink-soft);
+}
+#guide form {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--panel-edge);
+}
+#guide input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--ink);
+  background: var(--active);
+  border: 0;
+  border-radius: 9px;
+}
+#guide input::placeholder {
+  color: var(--ink-soft);
+}
+#guide form button {
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 9px;
+  background: var(--active);
+}
+#guide form button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 #events .head {
   display: flex;
   justify-content: space-between;
@@ -361,7 +504,7 @@ body.ready .bldg {
 }
 
 @media (max-width: 760px) {
-  #events {
+  #side {
     display: none;
   }
   #card {

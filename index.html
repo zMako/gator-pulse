@@ -17,7 +17,14 @@
         <button type="button" data-set-theme="night">Night</button>
       </div>
     </header>
-    <aside id="events" class="panel" aria-label="Events"></aside>
+    <aside id="side" class="panel">
+      <div class="tabs" role="tablist" aria-label="Side panel">
+        <button type="button" role="tab" id="tab-guide" data-tab="guide" aria-controls="guide" aria-selected="true">Guide</button>
+        <button type="button" role="tab" id="tab-events" data-tab="events" aria-controls="events" aria-selected="false">Events</button>
+      </div>
+      <section id="guide" role="tabpanel" aria-labelledby="tab-guide"></section>
+      <section id="events" role="tabpanel" aria-labelledby="tab-events" hidden></section>
+    </aside>
     <aside id="card" class="panel" aria-label="Event details" hidden></aside>
     <footer id="timeline" class="panel" aria-label="Time"></footer>
     <div id="credit">

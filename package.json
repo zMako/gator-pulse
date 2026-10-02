@@ -11,6 +11,7 @@
     "bake": "python3 scripts/bake_campus.py"
   },
   "dependencies": {
+    "@google/genai": "^2.27.0",
     "express": "^4.22.3",
     "three": "^0.170.0"
   },

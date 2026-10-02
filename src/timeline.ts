@@ -111,7 +111,7 @@ export function createTimeline(root: HTMLElement, onChange: (time: number) => vo
     },
     set(time) {
       stop()
-      go(Math.ceil((time - base) / STEP))
+      go(time <= Date.now() ? 0 : Math.ceil((time - base) / STEP))
     },
     setEvents(list) {
       events = list

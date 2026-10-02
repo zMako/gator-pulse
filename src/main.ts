@@ -11,6 +11,7 @@ import { buildCampus, seededRandom, type CampusData } from './campus'
 import { buildTraffic } from './traffic'
 import { Beacons } from './beacons'
 import { dayOf, formatDate, formatTime, loadEvents, nightness, stateAt, themeOf, type CampusEvent } from './events'
+import { createGuide, type Plan } from './guide'
 import { createPanel } from './panel'
 import { createTimeline } from './timeline'
 import { env, skyDome } from './sky'
@@ -23,6 +24,8 @@ const THEME_KEY = 'gator-pulse-theme'
 const TRANSITION_SECONDS = 1.6
 const AUTO_TRANSITION_SECONDS = 0.7
 const FLIGHT_SECONDS = 1.4
+// How long a guided tour rests on each stop of a plan.
+const TOUR_DWELL_MS = 4500
 const FEED_REFRESH_MS = 5 * 60 * 1000
 const MAX_PIXEL_RATIO = 1.5
 // Below this frame rate the render resolution steps down, so slow GPUs stay smooth.
@@ -186,6 +189,7 @@ async function init() {
   controls.addEventListener('start', () => {
     controls.autoRotate = false
     flight = null
+    stopTour()
   })
 
   // --- events, beacons, list and timeline ------------------------------------------------------
@@ -197,13 +201,21 @@ async function init() {
 
   const beacons = new Beacons((place) => {
     const event = leads.get(place)
-    if (event) select(event, false)
+    if (!event) return
+    stopTour()
+    select(event, false)
   })
   scene.add(beacons.group)
 
   const panel = createPanel(document.getElementById('events')!, document.getElementById('card')!, {
-    onSelect: (event) => select(event, true),
-    onClose: () => select(null, false),
+    onSelect: (event) => {
+      stopTour()
+      select(event, true)
+    },
+    onClose: () => {
+      stopTour()
+      select(null, false)
+    },
   })
   const timeline = createTimeline(document.getElementById('timeline')!, refresh)
 
@@ -249,10 +261,52 @@ async function init() {
   function select(event: CampusEvent | null, seek: boolean) {
     selected = event
     panel.showCard(event)
-    if (event && seek && stateAt(event, timeline.time) === 'soon') timeline.set(event.start)
+    // Bring the slider to the event unless it is already on, or already over in real life.
+    if (event && seek && stateAt(event, timeline.time) !== 'live' && event.end > Date.now()) timeline.set(event.start)
     else refresh(timeline.time)
     const place = event?.place ? campus.places.get(event.place) : undefined
     if (place) flyTo(place.anchor)
+  }
+
+  // --- the guide: plans come back from Gemini and the map tours through their stops -------------
+  let tour = 0
+
+  function stopTour() {
+    clearInterval(tour)
+    tour = 0
+  }
+
+  function showStep(plan: Plan, index: number) {
+    const step = plan.steps[index]
+    guide.markStep(index)
+    const event = step.eventId ? events.find((candidate) => candidate.id === step.eventId) : undefined
+    if (event) return select(event, true)
+    const place = step.place ? campus.places.get(step.place) : undefined
+    if (place) flyTo(place.anchor)
+  }
+
+  const guide = createGuide(document.getElementById('guide')!, {
+    onAsk: stopTour,
+    onPlan(plan) {
+      stopTour()
+      let index = 0
+      showStep(plan, index)
+      tour = window.setInterval(() => (++index < plan.steps.length ? showStep(plan, index) : stopTour()), TOUR_DWELL_MS)
+    },
+    onStep(plan, index) {
+      stopTour()
+      showStep(plan, index)
+    },
+  })
+
+  const tabs = [...document.querySelectorAll<HTMLButtonElement>('[data-tab]')]
+  for (const tab of tabs) {
+    tab.addEventListener('click', () => {
+      for (const other of tabs) {
+        other.setAttribute('aria-selected', String(other === tab))
+        document.getElementById(other.dataset.tab!)!.hidden = other !== tab
+      }
+    })
   }
 
   async function load() {
