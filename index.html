@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gator Pulse</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%2342ffa0'/%3E%3C/svg%3E" />
+    <style>
+      :root {
+        --ink: rgba(226, 236, 255, 0.92);
+        --ink-soft: rgba(226, 236, 255, 0.6);
+        --halo: rgba(5, 7, 15, 0.95);
+        --panel: rgba(14, 16, 30, 0.55);
+        --panel-edge: rgba(255, 255, 255, 0.12);
+        --active: rgba(255, 255, 255, 0.16);
+      }
+      body[data-theme='day'] {
+        --ink: rgba(22, 28, 44, 0.92);
+        --ink-soft: rgba(22, 28, 44, 0.62);
+        --halo: rgba(255, 255, 255, 0.95);
+        --panel: rgba(255, 255, 255, 0.62);
+        --panel-edge: rgba(20, 30, 60, 0.12);
+        --active: rgba(20, 30, 60, 0.12);
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #05070f;
+        font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+      }
+      #app,
+      #labels {
+        position: fixed;
+        inset: 0;
+      }
+      #labels {
+        pointer-events: none;
+      }
+      #hud {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        right: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        pointer-events: none;
+        color: var(--ink);
+      }
+      #hud > * {
+        pointer-events: auto;
+        background: var(--panel);
+        border: 1px solid var(--panel-edge);
+        border-radius: 14px;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+      }
+      body.ready #hud,
+      body.ready .bldg {
+        transition: color 0.8s;
+      }
+      body.ready #hud > * {
+        transition: background 0.8s, border-color 0.8s;
+      }
+      .brand {
+        padding: 10px 14px;
+      }
+      .brand b {
+        display: block;
+        font-size: 15px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+      .brand span {
+        font-size: 11px;
+        color: var(--ink-soft);
+      }
+      .seg {
+        display: flex;
+        padding: 4px;
+        gap: 2px;
+      }
+      .seg button {
+        font: inherit;
+        font-size: 12px;
+        color: var(--ink-soft);
+        background: none;
+        border: 0;
+        border-radius: 10px;
+        padding: 7px 14px;
+        cursor: pointer;
+      }
+      .seg button[aria-pressed='true'] {
+        color: var(--ink);
+        background: var(--active);
+      }
+      .seg button:focus-visible {
+        outline: 2px solid var(--ink);
+      }
+      #credit {
+        position: fixed;
+        right: 12px;
+        bottom: 8px;
+        font-size: 10px;
+        color: var(--ink-soft);
+        text-shadow: 0 0 4px var(--halo);
+      }
+      #credit a {
+        color: inherit;
+      }
+      .bldg {
+        color: var(--ink);
+        opacity: 0.82;
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        text-shadow: 0 0 6px var(--halo), 0 0 2px var(--halo);
+        white-space: nowrap;
+      }
+      .event {
+        padding: 4px 9px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #05070f;
+        background: var(--c);
+        box-shadow: 0 0 18px var(--c);
+        white-space: nowrap;
+      }
+      .event small {
+        font-weight: 500;
+        opacity: 0.7;
+        margin-left: 6px;
+      }
+    </style>
+  </head>
+  <body data-theme="night">
+    <div id="app"></div>
+    <div id="labels"></div>
+    <header id="hud">
+      <div class="brand"><b>Gator Pulse</b><span>SF State · live campus</span></div>
+      <div class="seg" role="group" aria-label="Time of day">
+        <button type="button" data-set-theme="day">Day</button>
+        <button type="button" data-set-theme="night">Night</button>
+      </div>
+    </header>
+    <div id="credit">
+      Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
