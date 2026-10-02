@@ -5,7 +5,8 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const FILE = process.env.COMMUNITY_FILE ?? fileURLToPath(new URL('./.data/community.json', import.meta.url))
+// Kept outside server/ so that saving an event does not trip the development file watcher.
+const FILE = process.env.COMMUNITY_FILE ?? fileURLToPath(new URL('../.data/community.json', import.meta.url))
 const MAX_KEPT = 200
 
 function load() {

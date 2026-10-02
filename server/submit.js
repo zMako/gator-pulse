@@ -34,7 +34,22 @@ function gemma() {
   if (!apiKey) throw new SubmitError(503, 'Adding events is not switched on yet: the server has no Gemini API key.')
   return (client ??= new GoogleGenAI({ apiKey }))
 }
-const model = () => process.env.GEMMA_MODEL || 'gemma-4-31b-it'
+// Tried in order; the next one is only used when Google answers with a server error.
+const models = () => (process.env.GEMMA_MODEL ? [process.env.GEMMA_MODEL] : ['gemma-4-26b-a4b-it', 'gemma-4-31b-it'])
+
+/** @param {import('@google/genai').ContentListUnion} contents */
+async function askGemma(contents) {
+  let failure
+  for (const model of models()) {
+    try {
+      return await gemma().models.generateContent({ model, contents, config: { httpOptions: { timeout: 60_000, retryOptions: { attempts: 2, initialDelay: 1 } } } })
+    } catch (error) {
+      failure = error
+      if (!(Number(/** @type {{ status?: unknown }} */ (error)?.status) >= 500)) throw error
+    }
+  }
+  throw failure
+}
 
 /** Campus-local date and time to a timestamp. @param {string} date YYYY-MM-DD @param {string} time HH:MM */
 function campusTime(date, time) {
@@ -132,7 +147,7 @@ export async function readSubmission(input) {
   /** @type {import('@google/genai').Part[]} */
   const parts = [{ text: readingPrompt(message) }]
   if (hasImage) parts.push({ inlineData: { data: String(image?.data), mimeType: String(image?.mimeType) } })
-  const response = await gemma().models.generateContent({ model: model(), contents: [{ role: 'user', parts }] })
+  const response = await askGemma([{ role: 'user', parts }])
   return toDraft(parseJson(response.text ?? ''))
 }
 
@@ -162,15 +177,12 @@ export async function saveSubmission(draft) {
   // The student may have edited the draft, so the final wording is screened again.
   const verdict = parseJson(
     (
-      await gemma().models.generateContent({
-        model: model(),
-        contents: `You screen listings for a public university campus events map. Reply with only a JSON object: {"acceptable": true or false, "reason": "one short sentence if not acceptable, otherwise empty"}. It is not acceptable if it contains hate, harassment, sexual content, illegal activity, a scam, or private personal details about a named individual.
+      await askGemma(`You screen listings for a public university campus events map. Reply with only a JSON object: {"acceptable": true or false, "reason": "one short sentence if not acceptable, otherwise empty"}. It is not acceptable if it contains hate, harassment, sexual content, illegal activity, a scam, or private personal details about a named individual.
 
 Title: """${title}"""
 Place: """${where}"""
 Host: """${host}"""
-Description: """${description}"""`,
-      })
+Description: """${description}"""`)
     ).text ?? '',
   )
   if (verdict.acceptable !== true) throw new SubmitError(422, text(verdict.reason, 200) || 'That listing cannot go on the map.')
