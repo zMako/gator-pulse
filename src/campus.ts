@@ -286,6 +286,13 @@ export function buildCampus(data: CampusData): Campus {
     const outline = new THREE.Group()
     outline.add(new THREE.Mesh(geometry, fill), new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 12), line))
     outline.renderOrder = 5
+    // Slightly larger than the building and scaled about its centre, so the fill sits just outside
+    // the walls instead of fighting them for the same pixels.
+    const ring = points(building.r)
+    const centre = ring.reduce((sum, p) => sum.add(p), new THREE.Vector2()).divideScalar(ring.length)
+    const grow = 1.015
+    outline.scale.set(grow, 1.01, grow)
+    outline.position.set(centre.x * (1 - grow), 0.3, centre.y * (1 - grow))
     group.add(outline)
     highlighted = { group: outline, fill, line }
   }

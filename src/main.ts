@@ -268,7 +268,8 @@ async function init() {
       if (event.place && campus.places.has(event.place)) byPlace.set(event.place, [...(byPlace.get(event.place) ?? []), event])
     }
     leads.clear()
-    for (const name of new Set(events.map((event) => event.place))) {
+    // Every place with an event, plus every place that still has a beacon from an earlier listing.
+    for (const name of new Set([...events.map((event) => event.place), ...beacons.names()])) {
       const place = name ? campus.places.get(name) : undefined
       if (!name || !place) continue
       const here = byPlace.get(name)

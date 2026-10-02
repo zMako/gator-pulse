@@ -91,6 +91,11 @@ export class Beacons {
 
   constructor(private onPick: (place: string) => void) {}
 
+  /** Every place that has ever had a beacon, so callers can fade out the ones no longer needed. */
+  names() {
+    return [...this.beacons.keys()]
+  }
+
   /** Show or restyle the beacon at a place; pass null to fade it out. */
   set(place: string, at: THREE.Vector3, state: BeaconState | null) {
     let beacon = this.beacons.get(place)
