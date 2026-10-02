@@ -114,8 +114,8 @@ student organisations whose events nobody finds.
 
 It already works from the events listing the university has. To run it for real: deploy it (one
 container), restrict posting to SF State Google accounts, move student posts from the file to a
-database, and use a paid API tier so submitted photos are not used for training. Students who
-added an event can remove it; a campus deployment would add moderation by staff.
+database, and use a paid API tier so submitted photos are not used for training. For now anyone can take
+down a student-added event; a campus deployment would limit that to the poster and staff.
 
 ## Data and licences
 

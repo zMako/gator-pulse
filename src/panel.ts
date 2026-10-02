@@ -20,7 +20,7 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text 
 export function createPanel(
   list: HTMLElement,
   card: HTMLElement,
-  handlers: { onSelect(event: CampusEvent): void; onClose(): void; onRemove(event: CampusEvent): void; isMine(event: CampusEvent): boolean },
+  handlers: { onSelect(event: CampusEvent): void; onClose(): void; onRemove(event: CampusEvent): void },
 ): Panel {
   const head = el('button', 'head')
   head.type = 'button'
@@ -100,7 +100,9 @@ export function createPanel(
         link.rel = 'noreferrer'
         children.push(link)
       }
-      if (event.source === 'community' && !event.sample && handlers.isMine(event)) {
+      // Any student-added event can be taken down for now; a campus deployment would limit this
+      // to the poster and staff.
+      if (event.source === 'community' && !event.sample) {
         const remove = el('button', 'remove', 'Remove this event')
         remove.type = 'button'
         remove.addEventListener('click', () => handlers.onRemove(event))

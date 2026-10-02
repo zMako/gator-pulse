@@ -22,8 +22,6 @@ import { blankTheme, mixTheme, type ThemeName } from './theme'
 type ThemeMode = 'auto' | ThemeName
 
 const THEME_KEY = 'gator-pulse-theme'
-// Ids of events added from this browser, so their cards offer a Remove button.
-const MINE_KEY = 'gator-pulse-mine'
 const TRANSITION_SECONDS = 1.6
 const AUTO_TRANSITION_SECONDS = 0.7
 const FLIGHT_SECONDS = 1.4
@@ -222,7 +220,6 @@ async function init() {
       stopTour()
       select(null, false)
     },
-    isMine: (event) => mine().includes(event.id),
     async onRemove(event) {
       const response = await fetch(`/api/submissions/${encodeURIComponent(event.id)}`, { method: 'DELETE' })
       if (response.ok || response.status === 404) {
@@ -232,20 +229,6 @@ async function init() {
     },
   })
 
-  function mine(): string[] {
-    try {
-      return JSON.parse(localStorage.getItem(MINE_KEY) ?? '[]')
-    } catch {
-      return []
-    }
-  }
-  function remember(id: string) {
-    try {
-      localStorage.setItem(MINE_KEY, JSON.stringify([...mine(), id].slice(-50)))
-    } catch {
-      // Without storage the Remove button just won't appear.
-    }
-  }
   function removeEvent(id: string) {
     if (!events.some((event) => event.id === id)) return
     events = events.filter((event) => event.id !== id)
@@ -393,7 +376,6 @@ async function init() {
 
   createSubmit(document.getElementById('add')!, [...campus.places.keys()].sort(), (event) => {
     const added = withDay(event)
-    remember(added.id)
     addEvent(added)
     stopTour()
     select(added, true)
