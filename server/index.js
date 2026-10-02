@@ -4,7 +4,7 @@ import express from 'express'
 import { fileURLToPath } from 'node:url'
 import { getEvents } from './events.js'
 import { askGuide, GuideError } from './guide.js'
-import { changes } from './store.js'
+import { changes, removeCommunityEvent } from './store.js'
 import { readSubmission, saveSubmission, SubmitError } from './submit.js'
 
 // Local development keeps secrets in .env; in production they arrive as real environment variables.
@@ -96,16 +96,25 @@ app.post('/api/submissions', express.json({ limit: '32kb' }), rateLimit(6), asyn
   }
 })
 
+// A student can take down an event they added (the page only offers this for its own posts).
+app.delete('/api/submissions/:id', rateLimit(12), (request, response) => {
+  if (removeCommunityEvent(String(request.params.id))) response.status(204).end()
+  else response.status(404).json({ error: 'That event is no longer on the map.' })
+})
+
 // Open pages hold this connection and are told the moment anyone adds an event.
 app.get('/api/stream', (request, response) => {
   response.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' })
   response.write(': connected\n\n')
   const send = (event) => response.write(`event: added\ndata: ${JSON.stringify(event)}\n\n`)
+  const gone = (id) => response.write(`event: removed\ndata: ${JSON.stringify({ id })}\n\n`)
   const heartbeat = setInterval(() => response.write(': still here\n\n'), 25_000)
   changes.on('added', send)
+  changes.on('removed', gone)
   request.on('close', () => {
     clearInterval(heartbeat)
     changes.off('added', send)
+    changes.off('removed', gone)
   })
 })
 

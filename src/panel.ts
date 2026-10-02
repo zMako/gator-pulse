@@ -20,7 +20,7 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className = '', text 
 export function createPanel(
   list: HTMLElement,
   card: HTMLElement,
-  handlers: { onSelect(event: CampusEvent): void; onClose(): void },
+  handlers: { onSelect(event: CampusEvent): void; onClose(): void; onRemove(event: CampusEvent): void; isMine(event: CampusEvent): boolean },
 ): Panel {
   const head = el('button', 'head')
   head.type = 'button'
@@ -99,6 +99,12 @@ export function createPanel(
         link.target = '_blank'
         link.rel = 'noreferrer'
         children.push(link)
+      }
+      if (event.source === 'community' && !event.sample && handlers.isMine(event)) {
+        const remove = el('button', 'remove', 'Remove this event')
+        remove.type = 'button'
+        remove.addEventListener('click', () => handlers.onRemove(event))
+        children.push(remove)
       }
       card.replaceChildren(...children)
       card.scrollTop = 0

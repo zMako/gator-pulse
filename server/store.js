@@ -28,6 +28,17 @@ export function communityEvents() {
   return events.filter((event) => event.end > now)
 }
 
+/** Remove a student-added event; true if it existed. The removal is announced like an addition. */
+export function removeCommunityEvent(id) {
+  const before = events.length
+  events = events.filter((event) => event.id !== id)
+  if (events.length === before) return false
+  mkdirSync(dirname(FILE), { recursive: true })
+  writeFileSync(FILE, JSON.stringify(events))
+  changes.emit('removed', id)
+  return true
+}
+
 export function addCommunityEvent(event) {
   events = [...communityEvents(), event].slice(-MAX_KEPT)
   mkdirSync(dirname(FILE), { recursive: true })

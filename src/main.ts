@@ -22,6 +22,8 @@ import { blankTheme, mixTheme, type ThemeName } from './theme'
 type ThemeMode = 'auto' | ThemeName
 
 const THEME_KEY = 'gator-pulse-theme'
+// Ids of events added from this browser, so their cards offer a Remove button.
+const MINE_KEY = 'gator-pulse-mine'
 const TRANSITION_SECONDS = 1.6
 const AUTO_TRANSITION_SECONDS = 0.7
 const FLIGHT_SECONDS = 1.4
@@ -220,7 +222,36 @@ async function init() {
       stopTour()
       select(null, false)
     },
+    isMine: (event) => mine().includes(event.id),
+    async onRemove(event) {
+      const response = await fetch(`/api/submissions/${encodeURIComponent(event.id)}`, { method: 'DELETE' })
+      if (response.ok || response.status === 404) {
+        removeEvent(event.id)
+        select(null, false)
+      }
+    },
   })
+
+  function mine(): string[] {
+    try {
+      return JSON.parse(localStorage.getItem(MINE_KEY) ?? '[]')
+    } catch {
+      return []
+    }
+  }
+  function remember(id: string) {
+    try {
+      localStorage.setItem(MINE_KEY, JSON.stringify([...mine(), id].slice(-50)))
+    } catch {
+      // Without storage the Remove button just won't appear.
+    }
+  }
+  function removeEvent(id: string) {
+    if (!events.some((event) => event.id === id)) return
+    events = events.filter((event) => event.id !== id)
+    timeline.setEvents(events)
+    refresh(timeline.time)
+  }
 
   /** Outline the building a name refers to, or clear the outline. */
   function highlightPlace(name: string | null) {
@@ -362,13 +393,16 @@ async function init() {
 
   createSubmit(document.getElementById('add')!, [...campus.places.keys()].sort(), (event) => {
     const added = withDay(event)
+    remember(added.id)
     addEvent(added)
     stopTour()
     select(added, true)
   })
 
   // The server pushes each new event to every open page.
-  new EventSource('/api/stream').addEventListener('added', (message) => addEvent(withDay(JSON.parse((message as MessageEvent).data))))
+  const stream = new EventSource('/api/stream')
+  stream.addEventListener('added', (message) => addEvent(withDay(JSON.parse((message as MessageEvent).data))))
+  stream.addEventListener('removed', (message) => removeEvent(JSON.parse((message as MessageEvent).data).id))
 
   const tabs = [...document.querySelectorAll<HTMLButtonElement>('[data-tab]')]
   for (const tab of tabs) {

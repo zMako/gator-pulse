@@ -10,7 +10,8 @@ A live 3D map of SF State: events glow as beams of light, Gemini plans your free
 
 ## Tracks
 
-- GDG: Build with AI for Social Good (the one main track)
+- SF Hacks: Build for SFSU
+- GDG: Build with AI for Social Good
 - MLH: Best Open-Source AI Project
 - MLH: Best Use of Gemma 4
 
@@ -71,6 +72,13 @@ is in.
 - The guide can only recommend events that are really in the listing.
 - Flyer photos are not stored.
 - The moving cars and people are decoration, not real traffic data.
+
+### How SF State could run it
+
+It already works from the events listing the university has. To run it for real: deploy it,
+restrict posting to SF State Google accounts, move student posts to a database, and use a paid API
+tier so photos are not used for training. Students can remove what they posted; a campus
+deployment would add staff moderation.
 
 ### What's next
 

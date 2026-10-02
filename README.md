@@ -92,11 +92,29 @@ port 8080, which is what a container host such as Cloud Run needs.
   restrict posting to university accounts. Student events are kept in a file on the server.
   Building heights that OpenStreetMap lacks are estimates.
 
+## Hackathon tracks
+
+- **SF Hacks, Build for SFSU:** a real problem at SF State, with a clear beneficiary, AI doing the
+  work, and a route to running it on campus (see the next two sections).
+- **GDG, Build with AI for Social Good:** Gemini plans the student's day and drives the map; the
+  keys come from Google AI Studio. No Cloud credits reached the team, so it runs locally; `npm start`
+  is what a Cloud Run deployment would run.
+- **MLH, Best Open-Source AI Project:** Gemma 4, an open-weights model, reads flyers and screens
+  submissions; the code is MIT on GitHub with the model and dependencies listed above.
+- **MLH, Best Use of Gemma 4:** `gemma-4-26b-a4b-it` through the Gemini API, see
+  [`server/submit.js`](server/submit.js).
+
 ## Who at SF State this is for
 
 Commuter students who have a few hours between classes and no easy way to see what is on, and the
-student organisations whose events nobody finds. The university could run it from the events
-listing it already has, with flyer submissions restricted to SF State accounts.
+student organisations whose events nobody finds.
+
+## How SF State could run it
+
+It already works from the events listing the university has. To run it for real: deploy it (one
+container), restrict posting to SF State Google accounts, move student posts from the file to a
+database, and use a paid API tier so submitted photos are not used for training. Students who
+added an event can remove it; a campus deployment would add moderation by staff.
 
 ## Data and licences
 
