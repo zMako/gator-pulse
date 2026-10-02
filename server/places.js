@@ -51,6 +51,8 @@ const byName = [...buildings.values()]
 const ALIASES = [
   [/ (the depot|depot|rosa parks|jack adams|malcolm x|student center|ccsc) /, 'Cesar Chavez Student Center'],
   [/ (library|lib ?\d{2,4}) /, 'J. Paul Leonard Library'],
+  // "The Swamp (Formerly Bricks)": a student dining guide places The Bricks as attached to Mary Ward Hall.
+  [/ (the swamp|swamp|the bricks|bricks) /, 'Mary Ward Hall'],
   [/ (thornton|th ?\d{3}) /, 'Thornton Hall'],
   [/ (mashouf|mwc|wellness center) /, 'Mashouf Wellness Center'],
   [/ annex (2|ii) /, 'Temporary Annex 2'],

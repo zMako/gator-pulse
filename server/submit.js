@@ -3,7 +3,7 @@
 // flyer photo or a typed line, turns it into a structured event, places it in a building and
 // screens it. A person then checks the draft before it is saved.
 import { randomUUID } from 'node:crypto'
-import { GoogleGenAI } from '@google/genai'
+import { GoogleGenAI, ThinkingLevel } from '@google/genai'
 import { matchPlace, placeNames } from './places.js'
 import { addCommunityEvent } from './store.js'
 
@@ -42,7 +42,13 @@ async function askGemma(contents) {
   let failure
   for (const model of models()) {
     try {
-      return await gemma().models.generateContent({ model, contents, config: { httpOptions: { timeout: 60_000, retryOptions: { attempts: 2, initialDelay: 1 } } } })
+      return await gemma().models.generateContent({
+        model,
+        contents,
+        // Left to its default, Gemma spends most of its time thinking: about 19 seconds for a
+        // one-line message. Reading a flyer is extraction, so minimal thinking answers in about two.
+        config: { thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL }, httpOptions: { timeout: 60_000, retryOptions: { attempts: 2, initialDelay: 1 } } },
+      })
     } catch (error) {
       failure = error
       if (!(Number(/** @type {{ status?: unknown }} */ (error)?.status) >= 500)) throw error
@@ -96,7 +102,7 @@ From the flyer image and/or the message below, extract ONE event. Reply with onl
 "unsure": a list of short notes about anything you had to guess or could not read; [] if nothing
 
 Building list: ${placeNames.join('; ')}.
-Useful to know: The Depot, the Rosa Parks rooms, Jack Adams Hall and Malcolm X Plaza are at Cesar Chavez Student Center. Room codes start with a building abbreviation: TH is Thornton Hall, LIB is J. Paul Leonard Library, BH is Burk Hall, HUM is Humanities, CA is Creative Arts, FA is Fine Arts, BUS is Business, HH is Hensill Hall.
+Useful to know: The Depot, the Rosa Parks rooms, Jack Adams Hall and Malcolm X Plaza are at Cesar Chavez Student Center. The Swamp (formerly The Bricks) is at Mary Ward Hall. Room codes start with a building abbreviation: TH is Thornton Hall, LIB is J. Paul Leonard Library, BH is Burk Hall, HUM is Humanities, CA is Creative Arts, FA is Fine Arts, BUS is Business, HH is Hensill Hall.
 
 Message: """${message || '(none; read the image)'}"""`
 }
