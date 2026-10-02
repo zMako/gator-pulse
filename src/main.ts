@@ -141,7 +141,6 @@ async function init() {
   composer.setSize(innerWidth, innerHeight)
   composer.addPass(new RenderPass(scene, camera))
   const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.62, 0.9)
-  composer.addPass(bloom)
   const vignette = new ShaderPass({
     uniforms: { tDiffuse: { value: null }, uAmount: { value: 0.4 }, uSaturation: { value: 1 } },
     vertexShader: /* glsl */ `
@@ -157,12 +156,18 @@ async function init() {
       varying vec2 vUv;
       void main() {
         vec4 c = texture2D(tDiffuse, vUv);
+        // A NaN or infinite pixel fails these comparisons. Left in, the bloom blur that follows
+        // would spread it into a large black block.
+        bool finite = c.r >= 0.0 && c.r < 1e4 && c.g >= 0.0 && c.g < 1e4 && c.b >= 0.0 && c.b < 1e4;
+        if (!finite) c.rgb = vec3(0.0);
+        c.rgb = min(c.rgb, vec3(64.0));
         c.rgb = max(mix(vec3(dot(c.rgb, vec3(0.2126, 0.7152, 0.0722))), c.rgb, uSaturation), 0.0);
         float edge = 1.0 - smoothstep(1.05, 0.25, length(vUv - 0.5) * 1.25);
         gl_FragColor = vec4(c.rgb * (1.0 - uAmount * edge), c.a);
       }`,
   })
   composer.addPass(vignette)
+  composer.addPass(bloom)
   composer.addPass(new OutputPass())
 
   // --- day / night ---------------------------------------------------------------------------

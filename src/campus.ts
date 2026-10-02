@@ -274,9 +274,13 @@ export function buildCampus(data: CampusData): Campus {
 
   // --- trees -----------------------------------------------------------------------------------
   const count = data.trees.length / 2
-  const canopyMaterial = surface(new THREE.MeshStandardMaterial({ flatShading: true, roughness: 1 }), [1, 1, 1], [1.5, 1.9, 2.3])
+  const canopyMaterial = surface(new THREE.MeshStandardMaterial({ roughness: 1 }), [1, 1, 1], [1.5, 1.9, 2.3])
   const trunkMaterial = surface(new THREE.MeshLambertMaterial(), [0.3, 0.22, 0.16], [0.3, 0.26, 0.3])
-  const canopies = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), canopyMaterial, count)
+  // Faceted canopies from real per-face normals. flatShading would derive them per pixel, which
+  // yields NaN on faces seen edge-on.
+  const canopy = new THREE.IcosahedronGeometry(1, 1)
+  canopy.computeVertexNormals()
+  const canopies = new THREE.InstancedMesh(canopy, canopyMaterial, count)
   const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.22, 0.34, 1, 6).translate(0, 0.5, 0), trunkMaterial, count)
   const matrix = new THREE.Matrix4()
   const turn = new THREE.Quaternion()

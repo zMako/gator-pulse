@@ -35,7 +35,7 @@ const FRAGMENT_BODY = /* glsl */ `
 vec3 gpEmit = vec3(0.0);
 float gpRough = 0.92;
 {
-  vec3 on = normalize(vOn);
+  vec3 on = normalize(vOn + vec3(0.0, 1e-6, 0.0));
   float seed = vInfo.x;
   float bh = vInfo.y;
   float campus = vInfo.z;
@@ -77,7 +77,8 @@ float gpRough = 0.92;
     vec2 g = vec2(u / cw, v / fh);
     vec2 cell = floor(g);
     vec2 f = fract(g);
-    vec2 fw = fwidth(g);
+    // Edge-on walls have unbounded derivatives; unbounded, they turn the window maths into NaN.
+    vec2 fw = min(fwidth(g), vec2(1.0));
 
     // Three facade styles: punched windows, ribbon windows, curtain wall.
     float win;
@@ -102,7 +103,7 @@ float gpRough = 0.92;
 
     vec3 view = normalize(vWp - cameraPosition);
     vec3 refl = reflect(view, on);
-    float fresnel = pow(1.0 - max(dot(-view, on), 0.0), 3.0);
+    float fresnel = pow(clamp(1.0 - dot(-view, on), 0.0, 1.0), 3.0);
     vec3 mirror = gpSky(vec3(refl.x, max(refl.y, 0.0) + mix(0.3, 0.04, uNight), refl.z));
     mirror *= mix(0.45, 1.0, smoothstep(-0.4, 0.1, refl.y)) * (mix(0.15, 0.26, uNight) + 0.74 * fresnel);
 

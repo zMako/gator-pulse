@@ -50,7 +50,7 @@ function lightMaterial(color: THREE.Color, fragmentAlpha: string) {
   })
 }
 
-const BEAM_ALPHA = `pow(1.0 - vUv.y, 1.7) * (0.7 + 0.3 * sin(uTime * 2.2 + uPhase)) * (0.85 + 0.15 * sin(vUv.y * 40.0 - uTime * 3.0 + uPhase))`
+const BEAM_ALPHA = `pow(clamp(1.0 - vUv.y, 0.0, 1.0), 1.7) * (0.7 + 0.3 * sin(uTime * 2.2 + uPhase)) * (0.85 + 0.15 * sin(vUv.y * 40.0 - uTime * 3.0 + uPhase))`
 
 interface Lit {
   material: THREE.ShaderMaterial
