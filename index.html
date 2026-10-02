@@ -21,15 +21,17 @@
       <div class="tabs" role="tablist" aria-label="Side panel">
         <button type="button" role="tab" id="tab-guide" data-tab="guide" aria-controls="guide" aria-selected="true">Guide</button>
         <button type="button" role="tab" id="tab-events" data-tab="events" aria-controls="events" aria-selected="false">Events</button>
+        <button type="button" role="tab" id="tab-add" data-tab="add" aria-controls="add" aria-selected="false">Add</button>
       </div>
       <section id="guide" role="tabpanel" aria-labelledby="tab-guide"></section>
       <section id="events" role="tabpanel" aria-labelledby="tab-events" hidden></section>
+      <section id="add" role="tabpanel" aria-labelledby="tab-add" hidden></section>
     </aside>
     <aside id="card" class="panel" aria-label="Event details" hidden></aside>
     <footer id="timeline" class="panel" aria-label="Time"></footer>
     <div id="credit">
       Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors ·
-      Events from SF State's student organisations listing
+      Events from SF State's student organisations listing and from students
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

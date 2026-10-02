@@ -5,3 +5,4 @@ dist
 scripts/.cache
 .DS_Store
 *.pdf
+server/.data

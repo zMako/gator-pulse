@@ -1,5 +1,6 @@
 // Fetches SF State's public student-organisation events feed and reshapes it for the map.
 import { matchPlace } from './places.js'
+import { communityEvents } from './store.js'
 
 const FEED = 'https://sfsu.campuslabs.com/engage/api/discovery/event/search'
 const EVENT_PAGE = 'https://sfsu.campuslabs.com/engage/event/'
@@ -40,6 +41,7 @@ function reshape(raw) {
     image: raw.imagePath ? `${IMAGE}${raw.imagePath}?preset=med-w` : null,
     url: `${EVENT_PAGE}${raw.id}`,
     rsvps: raw.rsvpTotal ?? 0,
+    source: 'sfsu',
   }
 }
 
@@ -67,8 +69,8 @@ async function download() {
   return { events, fetchedAt: Date.now() }
 }
 
-/** Events, at most five minutes old. If the feed is down, the last good copy is served as stale. */
-export async function getEvents() {
+/** SF State's listing, at most five minutes old. If the feed is down, the last good copy is served as stale. */
+async function listing() {
   if (cache && Date.now() - cache.fetchedAt < FRESH_MS) return { ...cache, stale: false }
   pending ??= download().finally(() => (pending = null))
   try {
@@ -78,4 +80,11 @@ export async function getEvents() {
     if (cache) return { ...cache, stale: true }
     throw error
   }
+}
+
+/** Everything on the map: SF State's listing plus the events students have added. */
+export async function getEvents() {
+  const official = await listing()
+  const events = [...official.events, ...communityEvents()].sort((a, b) => a.start - b.start)
+  return { ...official, events }
 }

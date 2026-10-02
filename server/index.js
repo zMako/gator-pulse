@@ -4,6 +4,8 @@ import express from 'express'
 import { fileURLToPath } from 'node:url'
 import { getEvents } from './events.js'
 import { askGuide, GuideError } from './guide.js'
+import { changes } from './store.js'
+import { readSubmission, saveSubmission, SubmitError } from './submit.js'
 
 // Local development keeps secrets in .env; in production they arrive as real environment variables.
 try {
@@ -60,6 +62,51 @@ app.post('/api/guide', express.json({ limit: '32kb' }), rateLimit(12), async (re
             : 'The guide could not reach Gemini. Try again.'
     response.status(502).json({ error: reason })
   }
+})
+
+/** Shared error handling for the two submission steps. */
+function submissionFailed(error, response) {
+  if (error instanceof SubmitError) return response.status(error.status).json({ error: error.message })
+  console.error('submission failed:', error)
+  const status = Number(error?.status)
+  const reason =
+    status === 402
+      ? "The Gemini project behind this server has run out of credit, so Gemma can't read submissions."
+      : status === 429
+        ? 'Google is rate-limiting Gemma right now. Try again in a minute.'
+        : 'Gemma could not be reached. Try again.'
+  response.status(502).json({ error: reason })
+}
+
+// Step one: Gemma reads a flyer photo or a typed line and returns a draft to check.
+app.post('/api/submissions/read', express.json({ limit: '6mb' }), rateLimit(6), async (request, response) => {
+  try {
+    response.json({ draft: await readSubmission(request.body ?? {}) })
+  } catch (error) {
+    submissionFailed(error, response)
+  }
+})
+
+// Step two: the checked draft is screened and saved.
+app.post('/api/submissions', express.json({ limit: '32kb' }), rateLimit(6), async (request, response) => {
+  try {
+    response.json({ event: await saveSubmission(request.body ?? {}) })
+  } catch (error) {
+    submissionFailed(error, response)
+  }
+})
+
+// Open pages hold this connection and are told the moment anyone adds an event.
+app.get('/api/stream', (request, response) => {
+  response.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' })
+  response.write(': connected\n\n')
+  const send = (event) => response.write(`event: added\ndata: ${JSON.stringify(event)}\n\n`)
+  const heartbeat = setInterval(() => response.write(': still here\n\n'), 25_000)
+  changes.on('added', send)
+  request.on('close', () => {
+    clearInterval(heartbeat)
+    changes.off('added', send)
+  })
 })
 
 if (production) {

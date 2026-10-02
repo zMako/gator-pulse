@@ -10,9 +10,10 @@ import './style.css'
 import { buildCampus, seededRandom, type CampusData } from './campus'
 import { buildTraffic } from './traffic'
 import { Beacons } from './beacons'
-import { dayOf, formatDate, formatTime, loadEvents, nightness, stateAt, themeOf, type CampusEvent } from './events'
+import { dayOf, formatDate, formatTime, loadEvents, nightness, stateAt, themeOf, withDay, type CampusEvent } from './events'
 import { createGuide, type Plan } from './guide'
 import { createPanel } from './panel'
+import { createSubmit } from './submit'
 import { createTimeline } from './timeline'
 import { env, skyDome } from './sky'
 import { blankTheme, mixTheme, type ThemeName } from './theme'
@@ -298,6 +299,25 @@ async function init() {
       showStep(plan, index)
     },
   })
+
+  // --- events added by students -------------------------------------------------------------------
+  /** Put a newly added event on the map, whether it came from this page or from someone else's. */
+  function addEvent(event: CampusEvent) {
+    if (events.some((existing) => existing.id === event.id)) return
+    events = [...events, event].sort((a, b) => a.start - b.start)
+    timeline.setEvents(events)
+    refresh(timeline.time)
+  }
+
+  createSubmit(document.getElementById('add')!, [...campus.places.keys()].sort(), (event) => {
+    const added = withDay(event)
+    addEvent(added)
+    stopTour()
+    select(added, true)
+  })
+
+  // The server pushes each new event to every open page.
+  new EventSource('/api/stream').addEventListener('added', (message) => addEvent(withDay(JSON.parse((message as MessageEvent).data))))
 
   const tabs = [...document.querySelectorAll<HTMLButtonElement>('[data-tab]')]
   for (const tab of tabs) {

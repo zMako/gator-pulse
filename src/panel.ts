@@ -46,7 +46,8 @@ export function createPanel(
           const dot = el('span', 'dot')
           dot.style.setProperty('--c', themeOf(event.theme).css)
           const what = el('span', 'what', event.title)
-          what.append(el('small', '', event.place ? event.where : `${event.where} · not on the map`))
+          const origin = event.source === 'community' ? ' · added by a student' : ''
+          what.append(el('small', '', (event.place ? event.where : `${event.where} · not on the map`) + origin))
           row.append(dot, el('span', 'when', state === 'live' ? 'Live' : formatTime(event.start)), what)
           row.addEventListener('click', () => handlers.onSelect(event))
           const item = el('li')
@@ -80,19 +81,22 @@ export function createPanel(
         line.append(el('span', '', `${label} `), value)
         return line
       }
-      const link = el('a', '', 'Open the event page')
-      link.href = event.url
-      link.target = '_blank'
-      link.rel = 'noreferrer'
       children.push(
         tag,
         el('h2', '', event.title),
         fact('When', `${formatDate(event.start)}, ${formatTime(event.start)} – ${formatTime(event.end)}`),
         fact('Where', event.place ? event.where : `${event.where} (not on the map)`),
-        fact('Host', event.host),
-        el('p', 'about', event.description),
-        link,
       )
+      if (event.host) children.push(fact('Host', event.host))
+      if (event.source === 'community') children.push(fact('Source', 'Added by a student, read by Gemma 4'))
+      children.push(el('p', 'about', event.description))
+      if (event.url) {
+        const link = el('a', '', 'Open the event page')
+        link.href = event.url
+        link.target = '_blank'
+        link.rel = 'noreferrer'
+        children.push(link)
+      }
       card.replaceChildren(...children)
       card.scrollTop = 0
     },

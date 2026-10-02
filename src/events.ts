@@ -13,8 +13,11 @@ export interface CampusEvent {
   theme: string
   description: string
   image: string | null
-  url: string
+  /** The organiser's own page; student-added events have none. */
+  url: string | null
   rsvps: number
+  /** 'sfsu' for the official listing, 'community' for events students added. */
+  source: 'sfsu' | 'community'
   /** Campus-local calendar day of the start, YYYY-MM-DD. */
   day: string
 }
@@ -70,10 +73,13 @@ export function themeOf(theme: string) {
   return { label, color: three, css: `#${three.getHexString()}` }
 }
 
+/** Fill in the fields the page derives itself. */
+export const withDay = (event: Omit<CampusEvent, 'day'>): CampusEvent => ({ ...event, day: dayOf(event.start) })
+
 export async function loadEvents(): Promise<{ events: CampusEvent[]; stale: boolean }> {
   const response = await fetch('/api/events')
   const body = await response.json().catch(() => null)
   if (!response.ok || !body) throw new Error(body?.error ?? `The events request failed (${response.status}).`)
-  const events = (body.events as Omit<CampusEvent, 'day'>[]).map((event) => ({ ...event, day: dayOf(event.start) }))
+  const events = (body.events as Omit<CampusEvent, 'day'>[]).map(withDay)
   return { events, stale: Boolean(body.stale) }
 }
