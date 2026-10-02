@@ -19,6 +19,7 @@ export interface Theme {
   bloom: number
   bloomThreshold: number
   vignette: number
+  saturation: number
   stars: number
 }
 
@@ -27,21 +28,22 @@ const c = (r: number, g: number, b: number) => new THREE.Color(r, g, b)
 const dir = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).normalize()
 
 export const DAY: Theme = {
-  zenith: c(0.1, 0.27, 0.7),
-  horizon: c(0.44, 0.61, 0.9),
+  zenith: c(0.06, 0.23, 0.74),
+  horizon: c(0.42, 0.62, 0.95),
   glow: c(0.3, 0.26, 0.18),
   sunDir: dir(-0.5, 0.72, 0.48),
   sunColor: c(1.0, 0.95, 0.86),
   sunIntensity: 3.1,
   sunDisc: 1,
-  hemiSky: c(0.62, 0.76, 1.0),
+  hemiSky: c(0.55, 0.72, 1.0),
   hemiGround: c(0.42, 0.4, 0.36),
   hemiIntensity: 0.6,
   fogDensity: 0.00026,
   exposure: 0.9,
-  bloom: 0.07,
-  bloomThreshold: 1.1,
+  bloom: 0.16,
+  bloomThreshold: 1.0,
   vignette: 0.18,
+  saturation: 1.28,
   stars: 0,
 }
 
@@ -62,6 +64,7 @@ export const NIGHT: Theme = {
   bloom: 0.46,
   bloomThreshold: 0.9,
   vignette: 0.45,
+  saturation: 1,
   stars: 1,
 }
 

@@ -47,13 +47,25 @@ export function skyDome(): THREE.Mesh {
       uniform vec3 uSunColor;
       uniform float uSunDisc;
       uniform float uStars;
+      uniform float uNight;
+      uniform float uTime;
       varying vec3 vDir;
       float gpHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float gpNoise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(gpHash(i), gpHash(i + vec2(1.0, 0.0)), f.x), mix(gpHash(i + vec2(0.0, 1.0)), gpHash(i + vec2(1.0, 1.0)), f.x), f.y);
+      }
       void main() {
         vec3 d = normalize(vDir);
         vec3 c = gpSky(d);
         float s = max(dot(d, uSunDir), 0.0);
         c += uSunColor * (smoothstep(0.9993, 0.9997, s) * 9.0 + pow(s, 220.0) * 0.9 + pow(s, 14.0) * 0.16) * uSunDisc;
+        vec2 drift = d.xz / (d.y + 0.25) * 2.2 + uTime * 0.006;
+        float puff = gpNoise(drift) * 0.6 + gpNoise(drift * 2.3) * 0.3 + gpNoise(drift * 5.1) * 0.1;
+        float cloud = smoothstep(0.5, 0.76, puff) * smoothstep(0.02, 0.2, d.y) * (1.0 - uNight);
+        c = mix(c, vec3(1.0, 0.985, 0.96), cloud * 0.88);
         vec2 cell = floor(d.xz / (0.35 + d.y) * 260.0);
         c += vec3(0.9, 0.95, 1.0) * step(0.9972, gpHash(cell)) * smoothstep(0.12, 0.5, d.y) * uStars;
         gl_FragColor = vec4(c, 1.0);

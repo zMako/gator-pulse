@@ -76,7 +76,7 @@ export class Beacons {
       const phase = index * 1.7
 
       const shafts = [
-        { geometry: beam, scale: 1, nightGain: 2.6, dayGain: 1.6 },
+        { geometry: beam, scale: 1, nightGain: 2.6, dayGain: 2.3 },
         { geometry: halo, scale: 0.75, nightGain: 0.5, dayGain: 0.45 },
       ]
       for (const shaft of shafts) {

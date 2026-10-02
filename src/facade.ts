@@ -40,16 +40,32 @@ float gpRough = 0.92;
   float bh = vInfo.y;
   float campus = vInfo.z;
 
-  // Wall colour: concrete to sandstone, with the occasional brick building.
-  vec3 wall = mix(vec3(0.60, 0.585, 0.56), vec3(0.70, 0.64, 0.55), gpHash(vec2(seed, 7.7)));
-  wall = mix(wall, vec3(0.50, 0.33, 0.27), step(0.86, gpHash(vec2(seed, 2.3))));
-  wall *= 0.82 + 0.3 * gpHash(vec2(seed, 4.2));
-  wall *= mix(vec3(mix(0.86, 0.42, uNight)), vec3(1.0), campus);
+  // Night walls: concrete to sandstone with the occasional brick building, surroundings dimmed.
+  vec3 dusk = mix(vec3(0.60, 0.585, 0.56), vec3(0.70, 0.64, 0.55), gpHash(vec2(seed, 7.7)));
+  dusk = mix(dusk, vec3(0.50, 0.33, 0.27), step(0.86, gpHash(vec2(seed, 2.3))));
+  dusk *= 0.82 + 0.3 * gpHash(vec2(seed, 4.2));
+  dusk *= mix(0.42, 1.0, campus);
+
+  // Day walls: painted stucco, brick, sandstone and the pastel houses San Francisco is known for.
+  float paint = gpHash(vec2(seed, 5.5));
+  vec3 noon = paint < 0.22 ? vec3(0.86, 0.74, 0.52)
+    : paint < 0.40 ? vec3(0.74, 0.42, 0.30)
+    : paint < 0.56 ? vec3(0.52, 0.63, 0.74)
+    : paint < 0.72 ? vec3(0.88, 0.84, 0.76)
+    : paint < 0.86 ? vec3(0.82, 0.58, 0.46)
+    : vec3(0.60, 0.71, 0.56);
+  noon *= 0.88 + 0.2 * gpHash(vec2(seed, 4.2));
+  vec3 wall = mix(noon, dusk, uNight);
+
+  float tile = gpHash(vec2(seed, 8.8));
+  vec3 roof = campus > 0.5
+    ? (tile < 0.68 ? vec3(0.74, 0.73, 0.70) : tile < 0.84 ? vec3(0.40, 0.56, 0.36) : vec3(0.64, 0.40, 0.32))
+    : (tile < 0.40 ? vec3(0.64, 0.36, 0.28) : tile < 0.70 ? vec3(0.50, 0.50, 0.52) : tile < 0.88 ? vec3(0.78, 0.76, 0.72) : vec3(0.38, 0.32, 0.30));
 
   if (on.y > 0.5) {
-    diffuseColor.rgb = mix(vec3(0.46, 0.46, 0.48), wall, 0.3);
+    diffuseColor.rgb = mix(roof, mix(vec3(0.46, 0.46, 0.48), dusk, 0.3), uNight);
   } else if (on.y < -0.5 || bh < 1.0) {
-    diffuseColor.rgb = wall * 0.8;
+    diffuseColor.rgb = mix(vec3(0.58, 0.58, 0.60), dusk * 0.8, uNight);
   } else {
     vec2 along = normalize(vec2(-on.z, on.x));
     float u = dot(vWp.xz, along);

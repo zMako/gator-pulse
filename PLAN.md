@@ -28,7 +28,8 @@ shows what they can actually make it to.
 | Cloud Run + Firestore | Hosting; new beacons synced live to every viewer |
 | three.js + OpenStreetMap | The 3D campus, day and night |
 
-Tracks: GDG (Gemini for social good), MLH open-source AI, MLH best use of Gemma 4.
+Tracks: GDG (Gemini for social good) as the one main track, plus both MLH partner tracks
+(open-source AI and best use of Gemma 4). The organisers confirmed this combination is allowed.
 
 ## Phases
 
@@ -45,5 +46,4 @@ If time runs short: phases 3 and 4 must work; the week slider is the first thing
 ## Open questions
 
 - Exact Gemma 4 model name and limits on the Gemini API.
-- Whether one project may be entered in three tracks (ask an organiser).
 - Google Cloud credits arrive later; build on a free key until then.

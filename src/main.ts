@@ -6,7 +6,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { CSS2DObject, CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
-import { buildCampus, type CampusData } from './campus'
+import { buildCampus, seededRandom, type CampusData } from './campus'
+import { buildTraffic } from './traffic'
 import { Beacons, type BeaconSpec } from './beacons'
 import { env, skyDome } from './sky'
 import { blankTheme, mixTheme, type ThemeName } from './theme'
@@ -124,6 +125,9 @@ async function init() {
     scene.add(label)
   }
 
+  const traffic = buildTraffic(data, seededRandom(29))
+  scene.add(traffic.group)
+
   const specs: BeaconSpec[] = []
   for (const [name, title, where, color, strength] of SAMPLE_EVENTS) {
     const place = campus.places.get(name)
@@ -139,7 +143,7 @@ async function init() {
   const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.62, 0.9)
   composer.addPass(bloom)
   const vignette = new ShaderPass({
-    uniforms: { tDiffuse: { value: null }, uAmount: { value: 0.4 } },
+    uniforms: { tDiffuse: { value: null }, uAmount: { value: 0.4 }, uSaturation: { value: 1 } },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
       void main() {
@@ -149,9 +153,11 @@ async function init() {
     fragmentShader: /* glsl */ `
       uniform sampler2D tDiffuse;
       uniform float uAmount;
+      uniform float uSaturation;
       varying vec2 vUv;
       void main() {
         vec4 c = texture2D(tDiffuse, vUv);
+        c.rgb = max(mix(vec3(dot(c.rgb, vec3(0.2126, 0.7152, 0.0722))), c.rgb, uSaturation), 0.0);
         float edge = 1.0 - smoothstep(1.05, 0.25, length(vUv - 0.5) * 1.25);
         gl_FragColor = vec4(c.rgb * (1.0 - uAmount * edge), c.a);
       }`,
@@ -185,6 +191,8 @@ async function init() {
     bloom.strength = theme.bloom
     bloom.threshold = theme.bloomThreshold
     vignette.uniforms.uAmount.value = theme.vignette
+    vignette.uniforms.uSaturation.value = theme.saturation
+    traffic.setTheme(k)
     campus.setTheme(k)
     beacons.setTheme(k)
     renderer.shadowMap.needsUpdate = true
@@ -249,6 +257,7 @@ async function init() {
     controls.update()
     sky.position.copy(camera.position)
     beacons.tick(time)
+    traffic.tick(delta, renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)))
     composer.render()
     labels.render(scene, camera)
   })

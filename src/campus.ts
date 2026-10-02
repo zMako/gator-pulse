@@ -41,7 +41,7 @@ interface Look {
   glow?: THREE.Color
 }
 
-function seededRandom(seed: number) {
+export function seededRandom(seed: number) {
   let a = seed >>> 0
   return () => {
     a = (a + 0x6d2b79f5) >>> 0
@@ -156,21 +156,21 @@ export function buildCampus(data: CampusData): Campus {
   // --- ground layers, stacked a few centimetres apart ---------------------------------------
   lay(
     new THREE.CircleGeometry(26000, 96).rotateX(-Math.PI / 2),
-    surface(new THREE.MeshLambertMaterial(), [0.38, 0.385, 0.38], [0.12, 0.145, 0.22]),
+    surface(new THREE.MeshLambertMaterial(), [0.45, 0.43, 0.4], [0.12, 0.145, 0.22]),
   )
   if (data.campus.length) {
     lay(
       new THREE.ShapeGeometry(toShape(data.campus)).rotateX(-Math.PI / 2).translate(0, 0.08, 0),
-      surface(new THREE.MeshLambertMaterial(), [0.5, 0.49, 0.455], [0.2, 0.235, 0.36]),
+      surface(new THREE.MeshLambertMaterial(), [0.62, 0.56, 0.47], [0.2, 0.235, 0.36]),
     )
   }
 
   const areaLayers = {
-    g: { y: 0.16, material: surface(new THREE.MeshLambertMaterial(), [0.19, 0.35, 0.13], [0.1, 0.4, 0.28]) },
-    p: { y: 0.24, material: surface(new THREE.MeshLambertMaterial(), [0.17, 0.43, 0.16], [0.13, 0.78, 0.44]) },
+    g: { y: 0.16, material: surface(new THREE.MeshLambertMaterial(), [0.2, 0.43, 0.12], [0.1, 0.4, 0.28]) },
+    p: { y: 0.24, material: surface(new THREE.MeshLambertMaterial(), [0.16, 0.52, 0.18], [0.13, 0.78, 0.44]) },
     w: {
       y: 0.2,
-      material: surface(new THREE.MeshStandardMaterial({ roughness: 0.22 }), [0.09, 0.25, 0.42], [0.09, 0.28, 0.7]),
+      material: surface(new THREE.MeshStandardMaterial({ roughness: 0.22 }), [0.06, 0.3, 0.6], [0.09, 0.28, 0.7]),
     },
   }
   for (const kind of ['g', 'p', 'w'] as const) {
@@ -183,7 +183,7 @@ export function buildCampus(data: CampusData): Campus {
   lay(ribbons(data.paths, 1, 3, 0.32), surface(new THREE.MeshLambertMaterial(), [0.22, 0.23, 0.25], [0.25, 0.28, 0.44]))
   lay(
     ribbons(data.paths, 2, 0.85, 0.38),
-    surface(new THREE.MeshLambertMaterial(), [0.66, 0.63, 0.57], [0.3, 0.24, 0.18], [0.6, 0.35, 0.13]),
+    surface(new THREE.MeshLambertMaterial(), [0.8, 0.71, 0.58], [0.3, 0.24, 0.18], [0.6, 0.35, 0.13]),
   )
 
   // --- street lights (night only) ------------------------------------------------------------
@@ -288,7 +288,11 @@ export function buildCampus(data: CampusData): Campus {
     turn.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, random() * Math.PI * 2)
     matrix.compose(new THREE.Vector3(x, trunk + size * 0.95, z), turn, new THREE.Vector3(size, size * (1.15 + random() * 0.5), size))
     canopies.setMatrixAt(i, matrix)
-    canopies.setColorAt(i, color.setRGB(0.09 + random() * 0.08, 0.25 + random() * 0.14, 0.08 + random() * 0.06))
+    // It is October: roughly one tree in eight has turned.
+    const turned = random() < 0.12
+    if (turned) color.setRGB(0.42 + random() * 0.2, 0.2 + random() * 0.12, 0.04 + random() * 0.04)
+    else color.setRGB(0.09 + random() * 0.08, 0.25 + random() * 0.14, 0.08 + random() * 0.06)
+    canopies.setColorAt(i, color)
     matrix.compose(new THREE.Vector3(x, 0, z), turn, new THREE.Vector3(1, trunk + size * 0.5, 1))
     trunks.setMatrixAt(i, matrix)
   }
