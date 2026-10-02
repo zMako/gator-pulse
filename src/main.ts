@@ -25,6 +25,7 @@ const THEME_KEY = 'gator-pulse-theme'
 const TRANSITION_SECONDS = 1.6
 const AUTO_TRANSITION_SECONDS = 0.7
 const FLIGHT_SECONDS = 1.4
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000
 // How long a guided tour rests on each stop of a plan.
 const TOUR_DWELL_MS = 4500
 const FEED_REFRESH_MS = 5 * 60 * 1000
@@ -220,6 +221,39 @@ async function init() {
       select(null, false)
     },
   })
+
+  /** Outline the building a name refers to, or clear the outline. */
+  function highlightPlace(name: string | null) {
+    campus.highlight(name ? (campus.places.get(name)?.index ?? null) : null)
+  }
+
+  /** Open a building's card and outline it. */
+  function showBuilding(index: number) {
+    stopTour()
+    selected = null
+    const name = data.buildings[index].n ?? 'Building'
+    const now = Date.now()
+    const here = events.filter((event) => event.place === name && event.end > now && event.start < now + WEEK_MS)
+    campus.highlight(index)
+    panel.showBuilding(name, here, timeline.time, (event) => select(event, true))
+    refresh(timeline.time)
+  }
+
+  // A click (not a drag) on the map picks the building under the pointer.
+  const raycaster = new THREE.Raycaster()
+  let press: { x: number; y: number; at: number } | null = null
+  renderer.domElement.addEventListener('pointerdown', (event) => (press = { x: event.clientX, y: event.clientY, at: performance.now() }))
+  renderer.domElement.addEventListener('pointerup', (event) => {
+    if (!press || Math.hypot(event.clientX - press.x, event.clientY - press.y) > 6 || performance.now() - press.at > 500) return
+    press = null
+    raycaster.setFromCamera(new THREE.Vector2((event.clientX / innerWidth) * 2 - 1, -(event.clientY / innerHeight) * 2 + 1), camera)
+    const hit = raycaster.intersectObject(campus.buildings, false)[0]
+    if (hit?.face) showBuilding(campus.buildings.geometry.attributes.aBuilding.getX(hit.face.a))
+    else {
+      stopTour()
+      select(null, false)
+    }
+  })
   const timeline = createTimeline(document.getElementById('timeline')!, refresh)
 
   /** Redraw the list and the beacons for the moment on the slider. */
@@ -264,6 +298,7 @@ async function init() {
   function select(event: CampusEvent | null, seek: boolean) {
     selected = event
     panel.showCard(event)
+    highlightPlace(event?.place ?? null)
     // Bring the slider to the event unless it is already on, or already over in real life.
     if (event && seek && stateAt(event, timeline.time) !== 'live' && event.end > Date.now()) timeline.set(event.start)
     else refresh(timeline.time)
@@ -467,6 +502,7 @@ async function init() {
     controls.update()
     sky.position.copy(camera.position)
     beacons.tick(time, delta)
+    campus.tick(time)
     traffic.tick(delta, renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)))
     composer.render()
     labels.render(scene, camera)

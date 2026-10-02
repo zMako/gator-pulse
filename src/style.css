@@ -515,6 +515,17 @@ body[data-theme='day'] #add :is(textarea, input, select) {
   font-size: 12.5px;
   color: var(--ink);
 }
+#card .building {
+  list-style: none;
+  margin: 6px -6px 0;
+  padding: 0;
+}
+#card .building .when {
+  white-space: nowrap;
+}
+#card .building .row {
+  grid-template-columns: 8px 76px 1fr;
+}
 
 /* --- timeline -------------------------------------------------------------------------------- */
 #timeline {

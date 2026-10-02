@@ -4,6 +4,8 @@ export interface Panel {
   /** List the events of one day, marked up for the moment being shown. */
   showDay(title: string, events: CampusEvent[], time: number, selectedId: string | null): void
   showCard(event: CampusEvent | null): void
+  /** A card listing what is on in one building this week. */
+  showBuilding(name: string, events: CampusEvent[], time: number, onPick: (event: CampusEvent) => void): void
   /** A line under the heading, e.g. when the feed could not be loaded. */
   showNote(text: string, retry?: () => void): void
 }
@@ -99,6 +101,36 @@ export function createPanel(
         children.push(link)
       }
       card.replaceChildren(...children)
+      card.scrollTop = 0
+    },
+
+    showBuilding(name, events, time, onPick) {
+      card.hidden = false
+      const close = el('button', 'close', 'Close')
+      close.type = 'button'
+      close.addEventListener('click', handlers.onClose)
+      const rows = el('ol', 'building')
+      for (const event of events) {
+        const state = stateAt(event, time)
+        const row = el('button', 'row')
+        row.type = 'button'
+        row.dataset.state = state
+        const dot = el('span', 'dot')
+        dot.style.setProperty('--c', themeOf(event.theme).css)
+        const what = el('span', 'what', event.title)
+        what.append(el('small', '', event.where + (event.sample ? ' · sample student post' : event.source === 'community' ? ' · added by a student' : '')))
+        row.append(dot, el('span', 'when', state === 'live' ? 'Live' : `${formatDate(event.start).replace(/,.*/, '')} ${formatTime(event.start)}`), what)
+        row.addEventListener('click', () => onPick(event))
+        const item = el('li')
+        item.append(row)
+        rows.append(item)
+      }
+      card.replaceChildren(
+        close,
+        el('h2', '', name),
+        el('p', 'fact', events.length ? (events.length === 1 ? '1 event here this week' : `${events.length} events here this week`) : 'Nothing listed here this week.'),
+        rows,
+      )
       card.scrollTop = 0
     },
 

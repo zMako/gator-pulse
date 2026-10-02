@@ -20,6 +20,8 @@ export interface CampusData {
 
 export interface Place {
   name: string
+  /** Index into CampusData.buildings. */
+  index: number
   /** A point on the roof that is guaranteed to be inside the footprint. */
   anchor: THREE.Vector3
   area: number
@@ -28,8 +30,13 @@ export interface Place {
 export interface Campus {
   group: THREE.Group
   places: Map<string, Place>
+  /** The merged building mesh, for picking. Each vertex carries its building's index in `aBuilding`. */
+  buildings: THREE.Mesh
   /** k = 0 is day, 1 is night. */
   setTheme(k: number): void
+  /** Outline one building (by index into CampusData.buildings), or none. */
+  highlight(index: number | null): void
+  tick(time: number): void
 }
 
 type RGB = [number, number, number]
@@ -67,11 +74,12 @@ function toShape(ring: number[], holes: number[][] = []) {
   return shape
 }
 
-function withInfo(geometry: THREE.BufferGeometry, seed: number, height: number, campus: number) {
+function withInfo(geometry: THREE.BufferGeometry, seed: number, height: number, campus: number, index: number) {
   const count = geometry.attributes.position.count
   const info = new Float32Array(count * 3)
   for (let i = 0; i < count; i++) info.set([seed, height, campus], i * 3)
   geometry.setAttribute('aInfo', new THREE.BufferAttribute(info, 3))
+  geometry.setAttribute('aBuilding', new THREE.BufferAttribute(new Float32Array(count).fill(index), 1))
   return geometry
 }
 
@@ -225,6 +233,7 @@ export function buildCampus(data: CampusData): Campus {
       seed,
       building.h,
       building.c,
+      index,
     )
     solids.push(geometry)
     if (!building.c) return
@@ -235,7 +244,7 @@ export function buildCampus(data: CampusData): Campus {
     const area = triangles.reduce((sum, t) => sum + t.area, 0)
     const top = triangles[0]
     const anchor = new THREE.Vector3((top.a.x + top.b.x + top.c.x) / 3, building.h, (top.a.y + top.b.y + top.c.y) / 3)
-    if (building.n && (places.get(building.n)?.area ?? 0) < area) places.set(building.n, { name: building.n, anchor, area })
+    if (building.n && (places.get(building.n)?.area ?? 0) < area) places.set(building.n, { name: building.n, index, anchor, area })
 
     // Rooftop plant: boxes placed inside the largest roof triangles break up the flat roofline.
     if (area < 500) return
@@ -251,7 +260,7 @@ export function buildCampus(data: CampusData): Campus {
         .toNonIndexed()
         .rotateY(random() * Math.PI)
         .translate(x, building.h + height / 2, z)
-      solids.push(withInfo(box, seed, 0, 1))
+      solids.push(withInfo(box, seed, 0, 1, index))
     }
   })
 
@@ -259,6 +268,27 @@ export function buildCampus(data: CampusData): Campus {
   buildings.castShadow = true
   buildings.receiveShadow = true
   group.add(buildings)
+
+  // --- the picked building: a bright outline and a soft fill that breathes ---------------------
+  let highlighted: { group: THREE.Group; fill: THREE.MeshBasicMaterial; line: THREE.LineBasicMaterial } | null = null
+  const highlightColor = new THREE.Color(0.55, 0.95, 1.0)
+  function highlight(index: number | null) {
+    if (highlighted) {
+      group.remove(highlighted.group)
+      highlighted.group.traverse((object) => (object as THREE.Mesh).geometry?.dispose())
+      highlighted = null
+    }
+    const building = index === null ? undefined : data.buildings[index]
+    if (!building || building.r.length < 6) return
+    const geometry = new THREE.ExtrudeGeometry(toShape(building.r, building.k), { depth: building.h + 0.5, bevelEnabled: false }).rotateX(-Math.PI / 2)
+    const fill = new THREE.MeshBasicMaterial({ color: highlightColor, transparent: true, opacity: 0.16, depthWrite: false, blending: THREE.AdditiveBlending })
+    const line = new THREE.LineBasicMaterial({ color: highlightColor, transparent: true, opacity: 0.95, depthTest: false })
+    const outline = new THREE.Group()
+    outline.add(new THREE.Mesh(geometry, fill), new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 12), line))
+    outline.renderOrder = 5
+    group.add(outline)
+    highlighted = { group: outline, fill, line }
+  }
 
   // Campus outlines: a glowing trace at night, a pencil line by day.
   const edgeGeometry = new THREE.BufferGeometry()
@@ -307,6 +337,14 @@ export function buildCampus(data: CampusData): Campus {
   return {
     group,
     places,
+    buildings,
+    highlight,
+    tick(time) {
+      if (!highlighted) return
+      const pulse = 0.5 + 0.5 * Math.sin(time * 3)
+      highlighted.fill.opacity = 0.1 + 0.12 * pulse
+      highlighted.line.opacity = 0.6 + 0.4 * pulse
+    },
     setTheme(k) {
       for (const look of looks) {
         look.material.color.lerpColors(look.day, look.night, k)
