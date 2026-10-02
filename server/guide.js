@@ -37,8 +37,10 @@ function gemini() {
 
 // Tried in order. A model is skipped when Google reports it overloaded or rate-limited; each
 // attempt starts the conversation again from the top. Flash-Lite leads because it answers in a
-// second or two and the free tier allows far more calls to it than to the larger Flash model.
-const models = () => (process.env.GEMINI_MODEL ? [process.env.GEMINI_MODEL] : ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'])
+// second or two and the free tier allows 500 calls a day to each Lite model, against 20 a day
+// for the larger Flash models, which are kept only as a last resort.
+const models = () =>
+  process.env.GEMINI_MODEL ? [process.env.GEMINI_MODEL] : ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.7-flash', 'gemini-3.8-flash']
 // Fail fast rather than sit through the SDK's default of five slow retries.
 const HTTP = { timeout: 30_000, retryOptions: { attempts: 1 } }
 
