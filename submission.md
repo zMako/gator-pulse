@@ -10,7 +10,6 @@ A live 3D map of SF State: events glow as beams of light, Gemini plans your free
 
 ## Tracks
 
-- SF Hacks: Build for SFSU
 - GDG: Build with AI for Social Good
 - MLH: Best Open-Source AI Project
 - MLH: Best Use of Gemma 4

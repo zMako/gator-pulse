@@ -94,8 +94,9 @@ port 8080, which is what a container host such as Cloud Run needs.
 
 ## Hackathon tracks
 
-- **SF Hacks, Build for SFSU:** a real problem at SF State, with a clear beneficiary, AI doing the
-  work, and a route to running it on campus (see the next two sections).
+- **SF Hacks, Build for SFSU:** built for it, with a real problem at SF State, a clear
+  beneficiary and a route to running it on campus (see the next two sections), but not entered:
+  that track requires an SF State student on the team.
 - **GDG, Build with AI for Social Good:** Gemini plans the student's day and drives the map; the
   keys come from Google AI Studio. No Cloud credits reached the team, so it runs locally; `npm start`
   is what a Cloud Run deployment would run.
