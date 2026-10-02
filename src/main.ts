@@ -6,14 +6,24 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { CSS2DObject, CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js'
+import './style.css'
 import { buildCampus, seededRandom, type CampusData } from './campus'
 import { buildTraffic } from './traffic'
-import { Beacons, type BeaconSpec } from './beacons'
+import { Beacons } from './beacons'
+import { dayOf, formatDate, formatTime, loadEvents, nightness, stateAt, themeOf, type CampusEvent } from './events'
+import { createPanel } from './panel'
+import { createTimeline } from './timeline'
 import { env, skyDome } from './sky'
 import { blankTheme, mixTheme, type ThemeName } from './theme'
 
+/** 'auto' lights the campus for the time on the slider; the others pin it. */
+type ThemeMode = 'auto' | ThemeName
+
 const THEME_KEY = 'gator-pulse-theme'
 const TRANSITION_SECONDS = 1.6
+const AUTO_TRANSITION_SECONDS = 0.7
+const FLIGHT_SECONDS = 1.4
+const FEED_REFRESH_MS = 5 * 60 * 1000
 const MAX_PIXEL_RATIO = 1.5
 // Below this frame rate the render resolution steps down, so slow GPUs stay smooth.
 const MIN_FPS = 40
@@ -41,19 +51,12 @@ const LABELS: Record<string, string> = {
   'Science and Engineering Innovation Center': 'Science & Engineering',
 }
 
-// Placeholder beacons copied from today's SFSU events listing. Phase 2 replaces these with the live feed.
-const SAMPLE_EVENTS: [place: string, title: string, where: string, color: THREE.Color, strength: number][] = [
-  ['Cesar Chavez Student Center', 'Karaoke Night', 'The Depot', new THREE.Color(1.0, 0.3, 0.72), 0.85],
-  ['Thornton Hall', 'Guided Meditation', 'TH 818', new THREE.Color(0.3, 0.88, 1.0), 0.45],
-  ['Mashouf Wellness Center', 'Sound Bath', 'Studio 122', new THREE.Color(0.3, 0.88, 1.0), 0.6],
-  ['J. Paul Leonard Library', 'Interview Prep', 'LIB 121', new THREE.Color(1.0, 0.78, 0.3), 0.55],
-  ['Temporary Annex 1', 'SF Hacks × GDG', 'Annex I', new THREE.Color(0.42, 1.0, 0.6), 1.0],
-]
+const isMode = (value: string | null): value is ThemeMode => value === 'auto' || value === 'day' || value === 'night'
 
-function storedTheme(): ThemeName | null {
+function storedMode(): ThemeMode | null {
   try {
     const value = localStorage.getItem(THEME_KEY)
-    return value === 'day' || value === 'night' ? value : null
+    return isMode(value) ? value : null
   } catch {
     return null
   }
@@ -61,8 +64,8 @@ function storedTheme(): ThemeName | null {
 
 async function init() {
   const params = new URLSearchParams(location.search)
-  const queryTheme = params.get('theme')
-  let themeName: ThemeName = queryTheme === 'day' || queryTheme === 'night' ? queryTheme : (storedTheme() ?? 'night')
+  const queryMode = params.get('theme')
+  let mode: ThemeMode = isMode(queryMode) ? queryMode : (storedMode() ?? 'auto')
 
   const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' })
   let pixelRatio = Math.min(devicePixelRatio, MAX_PIXEL_RATIO)
@@ -107,7 +110,6 @@ async function init() {
   controls.maxDistance = 2600
   controls.autoRotate = !params.has('still')
   controls.autoRotateSpeed = 0.22
-  controls.addEventListener('start', () => (controls.autoRotate = false))
   controls.update()
 
   const data: CampusData = await (await fetch('/campus.json')).json()
@@ -127,14 +129,6 @@ async function init() {
 
   const traffic = buildTraffic(data, seededRandom(29))
   scene.add(traffic.group)
-
-  const specs: BeaconSpec[] = []
-  for (const [name, title, where, color, strength] of SAMPLE_EVENTS) {
-    const place = campus.places.get(name)
-    if (place) specs.push({ at: place.anchor.clone(), color, title, where, strength })
-  }
-  const beacons = new Beacons(specs)
-  scene.add(beacons.group)
 
   const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }))
   composer.setPixelRatio(renderer.getPixelRatio())
@@ -170,9 +164,118 @@ async function init() {
   composer.addPass(bloom)
   composer.addPass(new OutputPass())
 
+  // --- camera flights ------------------------------------------------------------------------
+  let flight: { progress: number; fromTarget: THREE.Vector3; toTarget: THREE.Vector3; fromEye: THREE.Vector3; toEye: THREE.Vector3 } | null = null
+
+  /** Glide to look at a point on the map, keeping roughly the current viewing direction. */
+  function flyTo(anchor: THREE.Vector3) {
+    const toTarget = new THREE.Vector3(anchor.x, Math.min(anchor.y, 30) * 0.5, anchor.z)
+    const offset = camera.position.clone().sub(controls.target)
+    const distance = THREE.MathUtils.clamp(offset.length(), 240, 420)
+    const direction = offset.normalize()
+    direction.y = THREE.MathUtils.clamp(direction.y, 0.35, 0.7)
+    flight = {
+      progress: 0,
+      fromTarget: controls.target.clone(),
+      toTarget,
+      fromEye: camera.position.clone(),
+      toEye: toTarget.clone().addScaledVector(direction.normalize(), distance),
+    }
+    controls.autoRotate = false
+  }
+  controls.addEventListener('start', () => {
+    controls.autoRotate = false
+    flight = null
+  })
+
+  // --- events, beacons, list and timeline ------------------------------------------------------
+  let events: CampusEvent[] = []
+  let selected: CampusEvent | null = null
+  /** The event each beacon currently stands for. */
+  const leads = new Map<string, CampusEvent>()
+  let autoNight = 1
+
+  const beacons = new Beacons((place) => {
+    const event = leads.get(place)
+    if (event) select(event, false)
+  })
+  scene.add(beacons.group)
+
+  const panel = createPanel(document.getElementById('events')!, document.getElementById('card')!, {
+    onSelect: (event) => select(event, true),
+    onClose: () => select(null, false),
+  })
+  const timeline = createTimeline(document.getElementById('timeline')!, refresh)
+
+  /** Redraw the list and the beacons for the moment on the slider. */
+  function refresh(time: number) {
+    autoNight = nightness(time)
+    const day = dayOf(time)
+    const todays = events.filter((event) => event.day === day)
+    panel.showDay(formatDate(time), todays, time, selected?.id ?? null)
+
+    const byPlace = new Map<string, CampusEvent[]>()
+    for (const event of todays) {
+      if (event.place && campus.places.has(event.place)) byPlace.set(event.place, [...(byPlace.get(event.place) ?? []), event])
+    }
+    leads.clear()
+    for (const name of new Set(events.map((event) => event.place))) {
+      const place = name ? campus.places.get(name) : undefined
+      if (!name || !place) continue
+      const here = byPlace.get(name)
+      if (!here) {
+        beacons.set(name, place.anchor, null)
+        continue
+      }
+      // The beacon speaks for whatever is on now, else what is next, else what just ended.
+      const lead =
+        here.find((event) => stateAt(event, time) === 'live') ??
+        here.find((event) => stateAt(event, time) === 'soon') ??
+        here[here.length - 1]
+      const state = stateAt(lead, time)
+      const detail = state === 'live' ? `until ${formatTime(lead.end)}` : state === 'soon' ? formatTime(lead.start) : 'ended'
+      leads.set(name, lead)
+      beacons.set(name, place.anchor, {
+        color: themeOf(lead.theme).color,
+        level: (state === 'live' ? 0.85 : state === 'soon' ? 0.42 : 0.14) + Math.min(lead.rsvps, 15) / 100,
+        live: state === 'live',
+        title: lead.title,
+        detail: here.length > 1 ? `${detail} · +${here.length - 1}` : detail,
+      })
+    }
+  }
+
+  /** Open an event's card and fly to it. `seek` also moves the slider to when it starts. */
+  function select(event: CampusEvent | null, seek: boolean) {
+    selected = event
+    panel.showCard(event)
+    if (event && seek && stateAt(event, timeline.time) === 'soon') timeline.set(event.start)
+    else refresh(timeline.time)
+    const place = event?.place ? campus.places.get(event.place) : undefined
+    if (place) flyTo(place.anchor)
+  }
+
+  async function load() {
+    try {
+      const result = await loadEvents()
+      events = result.events
+      timeline.setEvents(events)
+      panel.showNote(result.stale ? "Showing the last copy of SF State's events listing; it could not be refreshed." : '')
+    } catch (error) {
+      panel.showNote(error instanceof Error ? error.message : 'The events could not be loaded.', load)
+    }
+    refresh(timeline.time)
+  }
+  refresh(timeline.time)
+  load()
+  setInterval(load, FEED_REFRESH_MS)
+  // While the slider sits at "now", keep the live markers and the light moving with the clock.
+  setInterval(() => refresh(timeline.time), 30 * 1000)
+
   // --- day / night ---------------------------------------------------------------------------
   const theme = blankTheme()
-  let blend = themeName === 'night' ? 1 : 0
+  const goal = () => (mode === 'auto' ? autoNight : mode === 'night' ? 1 : 0)
+  let blend = goal()
 
   function applyTheme(k: number) {
     mixTheme(theme, k)
@@ -201,26 +304,29 @@ async function init() {
     campus.setTheme(k)
     beacons.setTheme(k)
     renderer.shadowMap.needsUpdate = true
+    // The panels and labels switch between their light and dark styles at the halfway point.
+    const look = k >= 0.5 ? 'night' : 'day'
+    if (document.body.dataset.theme !== look) document.body.dataset.theme = look
   }
 
   const buttons = [...document.querySelectorAll<HTMLButtonElement>('[data-set-theme]')]
-  function setTheme(name: ThemeName) {
-    themeName = name
-    document.body.dataset.theme = name
-    for (const button of buttons) button.setAttribute('aria-pressed', String(button.dataset.setTheme === name))
+  function setMode(next: ThemeMode) {
+    mode = next
+    for (const button of buttons) button.setAttribute('aria-pressed', String(button.dataset.setTheme === next))
     try {
-      localStorage.setItem(THEME_KEY, name)
+      localStorage.setItem(THEME_KEY, next)
     } catch {
-      // Private windows can refuse storage; the toggle still works for this visit.
+      // Private windows can refuse storage; the control still works for this visit.
     }
   }
-  for (const button of buttons) button.addEventListener('click', () => setTheme(button.dataset.setTheme as ThemeName))
+  for (const button of buttons) button.addEventListener('click', () => setMode(button.dataset.setTheme as ThemeMode))
   addEventListener('keydown', (event) => {
-    if (event.key.toLowerCase() === 't' && !event.metaKey && !event.ctrlKey) setTheme(themeName === 'night' ? 'day' : 'night')
+    const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement
+    if (event.key.toLowerCase() === 't' && !typing && !event.metaKey && !event.ctrlKey) setMode(blend >= 0.5 ? 'day' : 'night')
   })
-  setTheme(themeName)
-  applyTheme(blend)
-  // Flush styles first so enabling transitions does not fade the HUD in from the other theme.
+  setMode(mode)
+  applyTheme(THREE.MathUtils.smootherstep(blend, 0, 1))
+  // Flush styles first so enabling transitions does not fade the panels in from the other theme.
   void document.body.offsetHeight
   document.body.classList.add('ready')
 
@@ -253,15 +359,27 @@ async function init() {
       sampleSeconds = 0
     }
     const time = clock.elapsedTime
-    const goal = themeName === 'night' ? 1 : 0
-    if (blend !== goal) {
-      blend = THREE.MathUtils.clamp(blend + (Math.sign(goal - blend) * delta) / TRANSITION_SECONDS, 0, 1)
+
+    const target = goal()
+    if (blend !== target) {
+      const seconds = mode === 'auto' ? AUTO_TRANSITION_SECONDS : TRANSITION_SECONDS
+      const stride = delta / seconds
+      blend = Math.abs(target - blend) <= stride ? target : blend + Math.sign(target - blend) * stride
       applyTheme(THREE.MathUtils.smootherstep(blend, 0, 1))
     }
+
+    if (flight) {
+      flight.progress = Math.min(1, flight.progress + delta / FLIGHT_SECONDS)
+      const eased = THREE.MathUtils.smootherstep(flight.progress, 0, 1)
+      controls.target.lerpVectors(flight.fromTarget, flight.toTarget, eased)
+      camera.position.lerpVectors(flight.fromEye, flight.toEye, eased)
+      if (flight.progress >= 1) flight = null
+    }
+
     env.uTime.value = time
     controls.update()
     sky.position.copy(camera.position)
-    beacons.tick(time)
+    beacons.tick(time, delta)
     traffic.tick(delta, renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)))
     composer.render()
     labels.render(scene, camera)

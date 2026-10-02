@@ -276,6 +276,7 @@ def main():
 
     trees = [p for p in trees if abs(p[0]) < 1500 and abs(p[1]) < 1500]
     data = {
+        "origin": list(ORIGIN),
         "buildings": buildings,
         "paths": paths,
         "areas": areas,
